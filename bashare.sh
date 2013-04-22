@@ -1,9 +1,7 @@
 #! /bin/bash
 
 __read(){
-	#while read line
-	#do
-	#done
+	REQ=`while read L && [ " " "<" "$L" ] ; do echo "$L" ; done`
 	send_header 200
 	send_directory_index $PWD
 }
@@ -42,15 +40,13 @@ send_directory_index(){
 main(){
 	[ $UID == 0 ] && echo "You shouldn\'t run this script as root..."
 	PORT=${1-8000}
-	rm backpipe
+	IOPIPE=/tmp/basharepipe
+	[ -p $IOPIPE ] || mkfifo $IOPIPE
 	echo "Directory '${PWD}' is now available on port $PORT"
-	while [ $? -eq 0 ]
+	while true
 	do
-		mkfifo backpipe
-		nc -l "$PORT" 0<backpipe | __read 1>backpipe
-		rm backpipe
+		nc -l "$PORT" 0<backpipe | (__read) 1>backpipe
 	done
-	rm backpipe
 }
 
 main "$@"
