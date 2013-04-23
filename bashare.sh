@@ -2,11 +2,13 @@
 
 __read(){
 	REQ=`while read L && [ " " "<" "$L" ] ; do echo "$L" ; done`
+	#echo -e "================\nHTTP REQUEST: $REQ\n">&2
 	REQMETHOD=($(echo "$REQ" | grep "GET"))
 	
 	case ${REQMETHOD[0]} in
 		GET)
 			URL=${PWD}${REQMETHOD[1]}
+			URL=${URL//'%20'/ }
 			if   [[ $URL == */ ]] #is dir 
 			then
 				send_header 200 "text/html"
@@ -14,7 +16,7 @@ __read(){
 			elif [ -f "${URL}" ]
 			then 
 				send_header 200 $(file --mime-type "${URL}" | sed 's#.*:\ ##') $(stat -c%s "${URL}")
-				cat $URL
+				cat "${URL}"
 			else send_response 404
 			fi
 			;;
@@ -117,6 +119,8 @@ cat <<'EOF1'
 EOF1
 
 	echo "<h1>Content of $1</h1><ol>"	
+	SAVEIFS=$IFS
+	IFS=$(echo -en "\n\b")
 	for file in $(ls -a $1)
 	do
 		if [ -d "${1}${file}" ] 
@@ -124,6 +128,7 @@ EOF1
 		else echo "<li class=\"file\"><a href=\"${file}\">${file}</a></li>"
 		fi
 	done
+	IFS=$SAVEIFS
 	echo "</ol></article><footer>"
 	echo "<p>brought to you by <a href=\"https://github.com/araex/BASHare\">bashare</a></p>"
 	echo "</footer></body></html>"
