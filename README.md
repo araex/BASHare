@@ -12,4 +12,4 @@ Install:
 
 Usage:
 ------
-1. run 'webshare 8000'
+1. run `webshare 8000`

@@ -26,13 +26,14 @@ __read(){
 	esac
 }
 
-# send http header with response code $1
+# send http header
 # $1 = http response code
-# $2 = mime-type
+# $2 = [optional] mime-type
+# $3 = [optional] content-length
 send_header(){
 	echo "HTTP/1.1 $1 ${HTTP_RESPONSE[$1]}"
 	echo "Server: bashare.sh"
-	echo "Content-Type: $2; charset=UTF-8"
+	echo "Content-Type: ${2-"text/plain"}; charset=UTF-8"
 	echo "Connection: close"
 	echo "Accept-Ranges: bytes"
 	echo "Content-Length: $3" 
@@ -49,7 +50,8 @@ declare -a HTTP_RESPONSE=(
 	[500]="Internal Server Error"
 )
 
-# send directory index
+# generate directory index
+# $1 path of directory
 send_directory_index(){
 
 # CSS courtesy of Jochen Kupperschmidt
@@ -135,6 +137,9 @@ EOF1
 
 }
 
+# generate http error page
+# $1 http response type
+# $2 [optional] mime-type
 send_response(){
 	send_header $1 ${2-"text/html"}
 	echo "<html><head><title>${HTTP_RESPONSE[$1]}</title></head>"
@@ -144,7 +149,7 @@ send_response(){
 
 # main loop
 main(){
-	[ $UID == 0 ] && echo "You shouldn\'t run this script as root..."
+	[ $UID == 0 ] && echo "You shouldn\'t run this script with root privileges..."
 	PORT=${1-8000}
 	IOPIPE=/tmp/basharepipe
 	[ -p $IOPIPE ] || mkfifo $IOPIPE
