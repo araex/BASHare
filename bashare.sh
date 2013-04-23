@@ -110,14 +110,11 @@ cat <<'EOF1'
 EOF1
 
 	echo "<h1>Content of $1</h1><ol>"	
-	IFS=$'\n'
-	for file in $(ls -al $1)
+	for file in $(ls -a $1)
 	do
-		unset IFS
-		file=($file)
-		if [ -d "${file[8]}" ] 
-		then echo "<li class=\"directory\"><a href=\"${file[8]}/\">${file[8]}</a></li>"
-		else echo "<li class=\"directory\"><a href=\"${file[8]}\">${file[8]}</a></li>"
+		if [ -d "${1}${file}" ] 
+		then echo "<li class=\"directory\"><a href=\"${file}/\">${file}</a></li>"
+		else echo "<li class=\"file\"><a href=\"${file}\">${file}</a></li>"
 		fi
 	done
 	echo "</ol></article><footer>"
