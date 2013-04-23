@@ -6,12 +6,15 @@ __read(){
 	
 	case ${REQMETHOD[0]} in
 		GET)
-			FILE=${REQMETHOD[1]}
-			if   [[ $FILE == */ ]] #is dir 
-			then     send_header 200
-				 send_directory_index "${PWD}${FILE}";
-			elif [ -f "${FILE}" ]
-			then send_response 500
+			URL=${PWD}${REQMETHOD[1]}
+			if   [[ $URL == */ ]] #is dir 
+			then
+				send_header 200 "text/html"
+				send_directory_index "${URL}"
+			elif [ -f "${URL}" ]
+			then 
+				send_header 200 $(file --mime-type "${URL}" | sed 's#.*:\ ##') $(stat -c%s "${URL}")
+				cat $URL
 			else send_response 404
 			fi
 			;;
@@ -22,12 +25,16 @@ __read(){
 }
 
 # send http header with response code $1
+# $1 = http response code
+# $2 = mime-type
 send_header(){
 	echo "HTTP/1.1 $1 ${HTTP_RESPONSE[$1]}"
 	echo "Server: bashare.sh"
-	echo "Content-Type: text/html; charset=UTF-8"
+	echo "Content-Type: $2; charset=UTF-8"
 	echo "Connection: close"
-	echo -en "\r\n\r\n"
+	echo "Accept-Ranges: bytes"
+	echo "Content-Length: $3" 
+	echo -en "\r\n"
 }
 
 declare -a HTTP_RESPONSE=(
@@ -124,7 +131,7 @@ EOF1
 }
 
 send_response(){
-	send_header $1
+	send_header $1 ${2-"text/html"}
 	echo "<html><head><title>${HTTP_RESPONSE[$1]}</title></head>"
 	echo "<body><h1>$1</h1><h2>HTTP ERROR $1: ${HTTP_RESPONSE[$1]}</h2>"
 	echo "</body></html>"
@@ -139,7 +146,7 @@ main(){
 	echo "Directory '${PWD}' is now available on port $PORT"
 	while true
 	do
-		nc -l "$PORT" 0<backpipe | (__read) 1>backpipe
+		nc -l "$PORT" 0<$IOPIPE | (__read) 1>$IOPIPE
 	done
 }
 
