@@ -2,8 +2,23 @@
 
 __read(){
 	REQ=`while read L && [ " " "<" "$L" ] ; do echo "$L" ; done`
-	send_header 200
-	send_directory_index $PWD
+	REQMETHOD=($(echo "$REQ" | grep "GET"))
+	
+	case ${REQMETHOD[0]} in
+		GET)
+			FILE=${REQMETHOD[1]}
+			if   [[ $FILE == */ ]] #is dir 
+			then     send_header 200
+				 send_directory_index "${PWD}${FILE}";
+			elif [ -f "${FILE}" ]
+			then send_response 500
+			else send_response 404
+			fi
+			;;
+		*)
+			send_response 418
+			;;
+	esac
 }
 
 # send http header with response code $1
@@ -21,19 +36,101 @@ declare -a HTTP_RESPONSE=(
 	[403]="Forbidden"
 	[404]="Not Found"
 	[405]="Method Not Allowed"
+	[418]="I\'m a teapot"
 	[500]="Internal Server Error"
 )
 
 # send directory index
 send_directory_index(){
-	echo "<html><head><title>Index of $1</title></head>"
-	echo "<body>"
-	echo "<h1>Index of /$1</h1><hr><pre><a href="../">../</a>"
-	for file in $(ls $1)
+
+# CSS courtesy of Jochen Kupperschmidt
+# http://homework.nwsnet.de/releases/4f27/
+cat <<'EOF1'
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <style>
+      body {
+        background-color: #eeeeee;
+        font-family: Verdana, Arial, sans-serif;
+        font-size: 90%;
+        margin: 4em 0;
+      }
+
+      article,
+      footer {
+        display: block;
+        margin: 0 auto;
+        width: 80%;
+      }
+
+      a {
+        color: #004466;
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      a:visited {
+        color: #666666;
+      }
+
+      article {
+        background-color: #ffffff;
+        border: #cccccc solid 1px;
+        -moz-border-radius: 11px;
+        -webkit-border-radius: 11px;
+        border-radius: 11px;
+        padding: 0 1em;
+      }
+      h1 {
+        font-size: 140%;
+      }
+      ol {
+        line-height: 1.4em;
+        list-style-type: disc;
+      }
+      li.directory a:before {
+        content: '[ ';
+      }
+      li.directory a:after {
+        content: ' ]';
+      }
+
+      footer {
+        font-size: 70%;
+        text-align: center;
+      }
+    </style>
+    <title>Directory Index</title>
+  </head>
+  <body>
+
+    <article>
+EOF1
+
+	echo "<h1>Content of $1</h1><ol>"	
+	IFS=$'\n'
+	for file in $(ls -al $1)
 	do
-		echo "<a href=\"${file}/\">$file</a>"
+		unset IFS
+		file=($file)
+		if [ -d "${file[8]}" ] 
+		then echo "<li class=\"directory\"><a href=\"${file[8]}/\">${file[8]}</a></li>"
+		else echo "<li class=\"directory\"><a href=\"${file[8]}\">${file[8]}</a></li>"
+		fi
 	done
-	echo "</pre><hr></body></html>"
+	echo "</ol></article><footer>"
+	echo "<p>brought to you by <a href=\"https://github.com/araex/BASHare\">bashare</a></p>"
+	echo "</footer></body></html>"
+
+}
+
+send_response(){
+	send_header $1
+	echo "<html><head><title>${HTTP_RESPONSE[$1]}</title></head>"
+	echo "<body><h1>$1</h1><h2>HTTP ERROR $1: ${HTTP_RESPONSE[$1]}</h2>"
+	echo "</body></html>"
 }
 
 # main loop
