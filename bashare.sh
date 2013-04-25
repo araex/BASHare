@@ -1,27 +1,30 @@
 #! /bin/bash
+# BASHare is a utility that shares the currently open directory on a built in webserver
+# dependencies: 'socat' or 'netcat'* 
+# *netcat does not offer multiple simultanious connections
 
 __init(){	
 	[ $UID == 0 ] && echo "You shouldn\'t run this script with root privileges..."
 	command -v socat >/dev/null 2>&1 && SOCAT="true"
 	command -v netcat >/dev/null 2>&1 && NETCAT="true"
 
-	PORT=8005
 	__parse_Args $@
+
 	if [ $SOCAT ]
 	then
-		echo "Using socat. Directory '${PWD}' is now available on port $PORT"
+		echo "Using socat. Directory '${PWD}' is now available on port ${BSHR_PORT}"
 		DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-		## FIXME, losing args on call!!
-		socat TCP4-LISTEN:${PORT},fork EXEC:"${DIR}/bashare.sh RECURSIVECALL"
+		export BSHR_SOCAT_CALL="true"
+		socat TCP4-LISTEN:${BSHR_PORT},fork EXEC:"${DIR}/bashare.sh"
 
 	elif [ $NETCAT ]
 	then
 		IOPIPE=/tmp/basharepipe
 		[ -p $IOPIPE ] || mkfifo $IOPIPE
-		echo "Using netcat. Directory '${PWD}' is now available on port $PORT"
+		echo "Using netcat. Directory '${PWD}' is now available on port ${BSHR_PORT}"
 		while true
 		do
-			nc -l "$PORT" 0<$IOPIPE | (__read) 1>$IOPIPE
+			nc -l "${BSHR_PORT}" 0<$IOPIPE | (__read) 1>$IOPIPE
 		done
 	else
 		echo "Couldn't locate netcat or socat, aborting."
@@ -29,12 +32,13 @@ __init(){
 	fi	
 }	
 
+# parse command line arguments, export them for socat use
 __parse_Args(){
-		# parse arguments
+	export BSHR_PORT=8000
 	while getopts "p:hr:" opt; do
   		case $opt in
     			p)
-      				PORT=$OPTARG
+      				BSHR_PORT=$OPTARG
       			;;
 			h)
 				echo "usage: ..."
@@ -51,6 +55,8 @@ __parse_Args(){
 	shift $((OPTIND - 1))
 
 }
+
+# HTTP request interprer
 __read(){
 	REQ=""
 	while read L && [ " " "<" "$L" ]; do 
@@ -201,10 +207,9 @@ send_response(){
 	echo "</body></html>"
 }
 
-if [ "$1" = "RECURSIVECALL" ] 
+if [ $BSHR_SOCAT_CALL ] 
 then
-	shift 1
-	__parse_Args $@
+	unset BSHR_SOCAT_CALL
 	__read
 else
 __init $@
