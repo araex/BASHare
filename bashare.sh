@@ -1,10 +1,13 @@
 #! /bin/bash
 
 __read(){
-	REQ=`while read L && [ " " "<" "$L" ] ; do echo "$L" ; done`
+	REQ=""
+	while read L && [ " " "<" "$L" ]; do 
+		REQ=${REQ}${L} 
+	done
 	#echo -e "================\nHTTP REQUEST: $REQ\n">&2
 	REQMETHOD=($(echo "$REQ" | grep "GET"))
-	
+
 	case ${REQMETHOD[0]} in
 		GET)
 			URL=${PWD}${REQMETHOD[1]}
@@ -148,9 +151,7 @@ send_response(){
 }
 
 # main loop
-main(){
-	[ $UID == 0 ] && echo "You shouldn\'t run this script with root privileges..."
-	PORT=${1-8000}
+main_netcat(){
 	IOPIPE=/tmp/basharepipe
 	[ -p $IOPIPE ] || mkfifo $IOPIPE
 	echo "Directory '${PWD}' is now available on port $PORT"
@@ -160,4 +161,12 @@ main(){
 	done
 }
 
-main "$@"
+main_socat(){
+	socat TCP4-LISTEN:8002,fork EXEC:"/home/araex/Dropbox/Stuff/Bash/BASHare/bashare.sh"
+}
+
+[ $UID == 0 ] && echo "You shouldn\'t run this script with root privileges..."
+PORT=${1-8000}
+
+#main "$@"
+__read "$@"
