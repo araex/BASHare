@@ -1,5 +1,56 @@
 #! /bin/bash
 
+__init(){	
+	[ $UID == 0 ] && echo "You shouldn\'t run this script with root privileges..."
+	command -v socat >/dev/null 2>&1 && SOCAT="true"
+	command -v netcat >/dev/null 2>&1 && NETCAT="true"
+
+	PORT=8005
+	__parse_Args $@
+	if [ $SOCAT ]
+	then
+		echo "Using socat. Directory '${PWD}' is now available on port $PORT"
+		DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+		## FIXME, losing args on call!!
+		socat TCP4-LISTEN:${PORT},fork EXEC:"${DIR}/bashare.sh RECURSIVECALL"
+
+	elif [ $NETCAT ]
+	then
+		IOPIPE=/tmp/basharepipe
+		[ -p $IOPIPE ] || mkfifo $IOPIPE
+		echo "Using netcat. Directory '${PWD}' is now available on port $PORT"
+		while true
+		do
+			nc -l "$PORT" 0<$IOPIPE | (__read) 1>$IOPIPE
+		done
+	else
+		echo "Couldn't locate netcat or socat, aborting."
+		exit 1
+	fi	
+}	
+
+__parse_Args(){
+		# parse arguments
+	while getopts "p:hr:" opt; do
+  		case $opt in
+    			p)
+      				PORT=$OPTARG
+      			;;
+			h)
+				echo "usage: ..."
+				exit 1
+			;;
+			r)
+				echo "TODO Recursive mode for $OPTARG directorylevels enabled"
+			;;	
+    			\?)
+      				echo "Invalid option: -$OPTARG" >&2
+      			;;
+  		esac
+	done
+	shift $((OPTIND - 1))
+
+}
 __read(){
 	REQ=""
 	while read L && [ " " "<" "$L" ]; do 
@@ -150,23 +201,11 @@ send_response(){
 	echo "</body></html>"
 }
 
-# main loop
-main_netcat(){
-	IOPIPE=/tmp/basharepipe
-	[ -p $IOPIPE ] || mkfifo $IOPIPE
-	echo "Directory '${PWD}' is now available on port $PORT"
-	while true
-	do
-		nc -l "$PORT" 0<$IOPIPE | (__read) 1>$IOPIPE
-	done
-}
-
-main_socat(){
-	socat TCP4-LISTEN:8002,fork EXEC:"/home/araex/Dropbox/Stuff/Bash/BASHare/bashare.sh"
-}
-
-[ $UID == 0 ] && echo "You shouldn\'t run this script with root privileges..."
-PORT=${1-8000}
-
-#main "$@"
-__read "$@"
+if [ "$1" = "RECURSIVECALL" ] 
+then
+	shift 1
+	__parse_Args $@
+	__read
+else
+__init $@
+fi
