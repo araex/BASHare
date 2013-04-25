@@ -7,9 +7,9 @@ Requires the utility `socat` or `netcat`. netcat does not allow for multiple sim
 
 Install:
 --------
-1. download the script and grant in executable rights `chmod +x /PATH/TO/SCRIPT` 
+1. download the script and grant executable rights `chmod +x /PATH/TO/SCRIPT/bashare.sh` 
 2. open `.bashrc` in a texteditor of your choice
-3. add a function:  `bashare() { /PATH/TO/SCRIPT/bashare.sh "$@" ;}`
+3. add a new line:  `bashare() { /PATH/TO/SCRIPT/bashare.sh "$@" ;}`
 
 Usage:
 ------
