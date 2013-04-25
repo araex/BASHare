@@ -35,17 +35,17 @@ __init(){
 # parse command line arguments, export them for socat use
 __parse_Args(){
 	export BSHR_PORT=8000
-	while getopts "p:hr:" opt; do
+	while getopts "p:hr" opt; do
   		case $opt in
     			p)
       				BSHR_PORT=$OPTARG
       			;;
 			h)
-				echo "usage: ..."
+				echo "BASHare is a utility that conveniently serves the current directory from a webserver. \nusage: bashare [optional parameters]\nParameters:\n-p PORT\tBinds to webserver to PORT.\n\n-r\tWebserver will not show subdirectories, only current directory."
 				exit 1
 			;;
 			r)
-				echo "TODO Recursive mode for $OPTARG directorylevels enabled"
+				echo "NOT IMPLEMENTED YET. Show only current directory, no subdirectories."
 			;;	
     			\?)
       				echo "Invalid option: -$OPTARG" >&2
