@@ -50,6 +50,7 @@ __showHelp(){
 	echo "  -p: port to use"
 	echo "  -r: only serve current directory, no subdircetories"
 	echo "  -h: show this help"
+	exit 1
 }
 
 # HTTP request interpreter
