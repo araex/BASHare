@@ -37,21 +37,12 @@ __parse_Args(){
 	export BSHR_PORT=8000
 	while getopts "p:hr" opt; do
   		case $opt in
-    			p)
-      				BSHR_PORT=$OPTARG
-      			;;
-			h)
-				__showHelp $0
-			;;
-			r)
-				echo "NOT IMPLEMENTED YET. Show only current directory, no subdirectories."
-			;;	
-    			\?)
-      				echo "Invalid option: -$OPTARG" >&2
-      			;;
+    			p)  BSHR_PORT=$OPTARG;;
+			h)  __showHelp $0;;
+			r)  echo "NOT IMPLEMENTED YET. Show only current directory, no subdirectories.";;
+    			\?)  __showHelp $0;;
   		esac
 	done
-
 }
 
 __showHelp(){
@@ -61,14 +52,14 @@ __showHelp(){
 	echo "  -h: show this help"
 }
 
-# HTTP request interprer
+# HTTP request interpreter
 __read(){
 	REQ=""
-	while read L && [ " " "<" "$L" ]; do 
-		REQ=${REQ}${L} 
+	while read line && [ " " "<" "$line" ]; do 
+		REQ=${REQ}${line} 
 	done
-	#echo -e "================\nHTTP REQUEST: $REQ\n">&2
-	REQMETHOD=($(echo "$REQ" | grep "GET"))
+	REQMETHOD=($(echo "$REQ" | grep "HTTP"))
+	[[ "$REQ" == *gzip* ]] && ENCGZIP="true"
 
 	case ${REQMETHOD[0]} in
 		GET)
@@ -77,11 +68,20 @@ __read(){
 			if   [[ $URL == */ ]] #is dir 
 			then
 				send_header 200 "text/html"
-				send_directory_index "${URL}"
+				if [ $ENCGZIP ]
+				then send_directory_index "${URL}" | gzip -cf
+				else send_directory_index "${URL}"
+				fi
 			elif [ -f "${URL}" ]
 			then 
-				send_header 200 $(file --mime-type "${URL}" | sed 's#.*:\ ##') $(stat -c%s "${URL}")
-				cat "${URL}"
+				MIMETYPE=$(file --mime-type "${URL}" | sed 's#.*:\ ##')
+				VIABLETYPES="text/html text/css text/plain text/xml application/x-javascript application/x-httpd-phpi"
+				[[ "$VIABLETYPES" == *${MIMETYPE}* ]] || ENGZIP=""
+				send_header 200 ${MIMETYPE} $(stat -c%s "${URL}")
+				if [ $ENCGZIP ]
+				then gzip -c "${URL}"
+				else cat "${URL}"
+				fi
 			else send_response 404
 			fi
 			;;
@@ -102,6 +102,7 @@ send_header(){
 	echo "Connection: close"
 	echo "Accept-Ranges: bytes"
 	echo "Content-Length: $3" 
+	[ $ENCGZIP ] && echo "Content-Encoding: gzip"
 	echo -en "\r\n"
 }
 
