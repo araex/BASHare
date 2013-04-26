@@ -70,8 +70,8 @@ __read(){
 			then
 				send_header 200 "text/html"
 				if [ $ENCGZIP ]
-				then send_directory_index "${URL}" | gzip -cf
-				else send_directory_index "${URL}"
+				then send_directory_index "${URL}" "${REQMETHOD[1]}" | gzip -cf
+				else send_directory_index "${URL}" "${REQMETHOD[1]}"
 				fi
 			elif [ -f "${URL}" ]
 			then 
@@ -121,86 +121,67 @@ declare -a HTTP_RESPONSE=(
 # $1 path of directory
 send_directory_index(){
 
-# CSS courtesy of Jochen Kupperschmidt
-# http://homework.nwsnet.de/releases/4f27/
+	DIR=$1
+	RELDIR=$2
+
+# HTML / CSS
 cat <<'EOF1'
 <html>
   <head>
     <meta charset="utf-8"/>
     <style>
-      body {
-        background-color: #eeeeee;
-        font-family: Verdana, Arial, sans-serif;
-        font-size: 90%;
-        margin: 4em 0;
-      }
+    	@import url(http://fonts.googleapis.com/css?family=Raleway:200,400,600);
+	body, html { background: #222; margin: 0; }
+	html { font: 14px/1.4 Raleway, Helvetica, sans-serif; color: #ddd; font-weight: 400; }
+	h2 { font-weight: 200; font-size: 32px; margin: 20px 35px; }
+	div.list { background: #111; padding: 20px 35px; }
+	div.foot { color: #777; margin-top: 15px; padding: 20px 35px; }
 
-      article,
-      footer {
-        display: block;
-        margin: 0 auto;
-        width: 80%;
-      }
+	td { padding: 0 20px; line-height: 21px; }
+	tr:hover { background: black; }
 
-      a {
-        color: #004466;
-        text-decoration: none;
-      }
-      a:hover {
-        text-decoration: underline;
-      }
-      a:visited {
-        color: #666666;
-      }
-
-      article {
-        background-color: #ffffff;
-        border: #cccccc solid 1px;
-        -moz-border-radius: 11px;
-        -webkit-border-radius: 11px;
-        border-radius: 11px;
-        padding: 0 1em;
-      }
-      h1 {
-        font-size: 140%;
-      }
-      ol {
-        line-height: 1.4em;
-        list-style-type: disc;
-      }
-      li.directory a:before {
-        content: '[ ';
-      }
-      li.directory a:after {
-        content: ' ]';
-      }
-
-      footer {
-        font-size: 70%;
-        text-align: center;
-      }
+	a { color: #6088BF; }
+	a:visited { color: #BF85AC; }
+	a:hover { color: #86B1BF; }
     </style>
     <title>Directory Index</title>
   </head>
   <body>
 
-    <article>
 EOF1
 
-	echo "<h1>Content of $1</h1><ol>"	
+	echo "<h2>Content of $RELDIR</h2>"	
+	echo "<div class=\"list\">"
+	echo "<table summary=\"Directory Listing\" cellpadding=\"0\" cellspacing=\"0\">"
+	echo "<thead><tr><th class="n">Name</th><th class="m">Last Modified</th><th class="s">Size</th><th class="t">MIME-Type</th></tr></thead>"
+	echo "<tbody>"
 	SAVEIFS=$IFS
 	IFS=$(echo -en "\n\b")
-	for file in $(ls -a $1)
+	#echo "<tr><td class=\"n\"><a href=\"..\">../</a></td><td class=\"m\">-</td><td class=\"s\">-</td><td class=\"t\">-</td></tr>"
+	for entry in $(ls -la $1)
 	do
-		if [ -d "${1}${file}" ] 
-		then echo "<li class=\"directory\"><a href=\"${file}/\">${file}</a></li>"
-		else echo "<li class=\"file\"><a href=\"${file}\">${file}</a></li>"
+		IFS=$SAVEIFS
+		entry=($entry)
+		file=$*
+		SIZE=`echo "${entry[4]}" | awk {'printf("%.2f kB", $1/1024)'}`
+		DATE="${entry[6]} ${entry[5]} ${entry[7]}"
+		file=""
+		for (( i=8; i<=${#entry[@]}; i++ )); do 
+			file="${file}${entry[i]} " 
+		done
+		file=$(echo "${file}" | sed 's/ *$//g') #remove tailing whitespace
+		if [ -d "${DIR}${file}" ] 
+		then
+			file="${file}/"
+			SIZE="-"
+			MIMETYPE="Directory"
+		else 
+			MIMETYPE=$(file --mime-type "${URL}${file}" | sed 's#.*:\ ##')
 		fi
+		echo "<tr><td class=\"n\"><a href=\"${file}\">${file}</a></td><td class=\"m\">${DATE}</td><td class=\"s\">${SIZE}</td><td class=\"t\">${MIMETYPE}</td></tr>"
 	done
-	IFS=$SAVEIFS
-	echo "</ol></article><footer>"
-	echo "<p>brought to you by <a href=\"https://github.com/araex/BASHare\">bashare</a></p>"
-	echo "</footer></body></html>"
+
+	echo "</tbody></table></div><div class="foot">powered by <a href=\"https://github.com/araex/BASHare\">bashare</a></div></body></html>"
 
 }
 
