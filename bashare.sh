@@ -41,8 +41,7 @@ __parse_Args(){
       				BSHR_PORT=$OPTARG
       			;;
 			h)
-				echo "BASHare is a utility that conveniently serves the current directory from a webserver. \nusage: bashare [optional parameters]\nParameters:\n-p PORT\tBinds to webserver to PORT.\n\n-r\tWebserver will not show subdirectories, only current directory."
-				exit 1
+				__showHelp $0
 			;;
 			r)
 				echo "NOT IMPLEMENTED YET. Show only current directory, no subdirectories."
@@ -52,8 +51,14 @@ __parse_Args(){
       			;;
   		esac
 	done
-	shift $((OPTIND - 1))
 
+}
+
+__showHelp(){
+	echo "Usage: `basename $1`: [-p port]"
+	echo "  -p: port to use"
+	echo "  -r: only serve current directory, no subdircetories"
+	echo "  -h: show this help"
 }
 
 # HTTP request interprer
