@@ -72,10 +72,16 @@ __read(){
 			URL=${URL//'%20'/ }
 			if   [[ $URL == */ ]] #is dir 
 			then
-				send_header 200 "text/html"
-				if [ $ENCGZIP ]
-				then send_directory_index "${URL}" "${REQMETHOD[1]}" | gzip -cf
-				else send_directory_index "${URL}" "${REQMETHOD[1]}"
+				if [[ $URL == *.ssh* ]] 
+				then
+					send_response 403
+				elif [ $ENCGZIP ]
+				then 
+					send_header 200 "text/html"
+					send_directory_index "${URL}" "${REQMETHOD[1]}" | gzip -cf
+				else 
+					send_header 200 "text/html"
+					send_directory_index "${URL}" "${REQMETHOD[1]}"
 				fi
 			elif [ -f "${URL}" ]
 			then 
@@ -193,9 +199,10 @@ EOF1
 # $1 http response type
 # $2 [optional] mime-type
 send_response(){
+	ENCGZIP=""
 	send_header $1 ${2-"text/html"}
-	echo "<html><head><title>${HTTP_RESPONSE[$1]}</title></head>"
-	echo "<body><h1>$1</h1><h2>HTTP ERROR $1: ${HTTP_RESPONSE[$1]}</h2>"
+	echo "<html><head><title>$1 : ${HTTP_RESPONSE[$1]}</title></head>"
+	echo "<body><h1>$1: ${HTTP_RESPONSE[$1]}</h1>"
 	echo "</body></html>"
 }
 
