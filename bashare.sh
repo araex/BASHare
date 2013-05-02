@@ -19,12 +19,14 @@ __init(){
 
 	elif [ $NETCAT ]
 	then
+		NCGNU=`nc --version | head -n 1 | grep GNU`; 
+		[ "$NCGNU" ] && echo "netcat-gnu is currently not supported. Please install either socat, openbsd-netcat or netcat-traditional. Terminating." && exit 1
 		IOPIPE=/tmp/basharepipe
 		[ -p $IOPIPE ] || mkfifo $IOPIPE
 		echo "Using netcat. Directory '${PWD}' is now available on port ${BSHR_PORT}"
 		while true
 		do
-			nc -lp "${BSHR_PORT}" 0<$IOPIPE | (__read) 1>$IOPIPE
+			nc -klp "${BSHR_PORT}" 0<$IOPIPE | (__read) 1>$IOPIPE
 		done
 	else
 		echo "Couldn't locate netcat or socat, aborting."
@@ -35,11 +37,12 @@ __init(){
 # parse command line arguments, export them for socat use
 __parse_Args(){
 	export BSHR_PORT=8000
-	while getopts "p:hr" opt; do
+	while getopts "p:hrn" opt; do
   		case $opt in
     			p)  BSHR_PORT=$OPTARG;;
 			h)  __showHelp $0;;
 			r)  echo "NOT IMPLEMENTED YET. Show only current directory, no subdirectories.";;
+			n)  SOCAT="";;
     			\?)  __showHelp $0;;
   		esac
 	done
@@ -49,6 +52,7 @@ __showHelp(){
 	echo "Usage: `basename $1`: [-p port]"
 	echo "  -p: port to use"
 	echo "  -r: only serve current directory, no subdircetories"
+	echo "  -n: force use of netcat even if socat is installed"
 	echo "  -h: show this help"
 	exit 1
 }
