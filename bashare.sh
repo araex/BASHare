@@ -24,7 +24,7 @@ __init(){
 		echo "Using netcat. Directory '${PWD}' is now available on port ${BSHR_PORT}"
 		while true
 		do
-			nc -l "${BSHR_PORT}" 0<$IOPIPE | (__read) 1>$IOPIPE
+			nc -lp "${BSHR_PORT}" 0<$IOPIPE | (__read) 1>$IOPIPE
 		done
 	else
 		echo "Couldn't locate netcat or socat, aborting."
