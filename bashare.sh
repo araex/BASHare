@@ -4,25 +4,39 @@
 # *netcat does not offer multiple simultanious connections
 
 __init(){	
+	# exit on CTRL+C
 	trap exit 1 2 3 6
+
+	# check if started with root privileges
 	[ $UID == 0 ] && echo "You shouldn\'t run this script with root privileges..."
+
+	# check if socat / netcat is installed
 	command -v socat >/dev/null 2>&1 && socat="true"
 	command -v netcat >/dev/null 2>&1 && netcat="true"
 
+	# MIME-types that can be compressed
+	ENC_TYPES="text/html text/css text/plain text/xml application/x-javascript application/x-httpd-phpi"
 	__parse_Args $@
 
+	# prefer usage of socat
 	if [ $socat ]; then
 		echo "Using socat. Directory '${PWD}' is now available on port ${BSHR_PORT}"
+		# get currently active dir (might differ from $PWD!!"
 		DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+		# set var to identify recursive script call
 		export BSHR_SOCAT_CALL="true"
+		# let socat execute the script
 		socat TCP4-LISTEN:${BSHR_PORT},fork EXEC:"${DIR}/bashare.sh"
 		echo "Socat terminated. Goodbye."
 	elif [ $netcat ]; then
-		#NCGNU=`nc --version | head -n 1 | grep GNU`; 
-		#[ "$NCGNU" ] && echo "netcat-gnu is currently not supported. Please install either socat, openbsd-netcat or netcat-traditional. Terminating." && exit 1
+		#TEMPORARILY REMOVED#NCGNU=`nc --version | head -n 1 | grep GNU`; 
+		#####################[ "$NCGNU" ] && echo "netcat-gnu is currently not supported. Please install either socat, openbsd-netcat or netcat-traditional. Terminating." && exit 1
+
+		# prepare bidrectional pipe for communication between script and netcat
 		IOPIPE=/tmp/basharepipe
 		[ -p $IOPIPE ] || mkfifo $IOPIPE
 		echo "Using netcat. Directory '${PWD}' is now available on port ${BSHR_PORT}"
+		# run in loop for compatiblity with OpenBSD-netcat which doesn't seem to implement -k correctly. gnu-netcat lacks the -k option.
 		while true
 		do
 			nc "-klp" "${BSHR_PORT}" 0<$IOPIPE | (__read) 1>$IOPIPE
@@ -49,6 +63,7 @@ __parse_Args(){
 	done
 }
 
+# called when -h is passed
 __showHelp(){
 	echo "Usage: `basename $1`: [-p port]"
 	echo "  -p: port to use"
@@ -61,37 +76,47 @@ __showHelp(){
 
 # HTTP request interpreter
 __read(){
-	REQ=""
+	# get first line of http request: METHOD PATH HTTPVERSION
 	read request
+	# transform to array. request[0]=METHOD, request[1]=PATH, request[2]=HTTPVERSION
 	request=($request)
 	[ $BSHR_VERBOSE ] && echo "${request[*]}">&2
+	# get rest of request header for additional options
 	while read line && [ " " "<" "$line" ]; do 
 		header+="${line}" 
 	done
-	[[ "$header" == *gzip* ]] && ENCGZIP="true"
+	# check if client supports http compression with gzip
+	[[ "$header" == *gzip* ]] && encgzip="true"
+
+	# only GET is supported at the moment
 	case ${request[0]} in
 		GET)
-			URL="${PWD}${request[1]}"
-			URL=${URL//'%20'/ }
-			if [ -d "$URL" ]; then
-				if [[ $URL == *.ssh* ]]; then
+			# build fully qualified directory name
+			url="${PWD}${request[1]}"
+			# http converts spaces to %20, revert this
+			url=${url//'%20'/ }
+			# if requested url is a directory, send directory listing
+			if [ -d "$url" ]; then
+				if [[ $url == *.ssh* ]]; then
 					send_response 403
-				elif [ $ENCGZIP ]; then 
+				elif [ $encgzip ]; then 
 					send_header 200 "text/html"
-					send_directory_index "${URL}" "${request[1]}" | gzip -cf
+					send_directory_index "${url}" "${request[1]}" | gzip -cf
 				else 
 					send_header 200 "text/html"
-					send_directory_index "${URL}" "${request[1]}"
+					send_directory_index "${url}" "${request[1]}"
 				fi
-			elif [ -f "${URL}" ]; then 
-				MIMETYPE=$(file --mime-type "${URL}" | sed 's#.*:\ ##')
-				VIABLETYPES="text/html text/css text/plain text/xml application/x-javascript application/x-httpd-phpi"
-				[[ "$VIABLETYPES" == *${MIMETYPE}* ]] || ENGZIP=""
-				send_header 200 ${MIMETYPE} $(stat -c%s "${URL}")
-				if [ $ENCGZIP ]; then 
-					gzip -c "${URL}"
+			# if requested url is a file, send file
+			elif [ -f "${url}" ]; then 
+				# get mimetype
+				mimetype=$(file --mime-type "${url}" | sed 's#.*:\ ##')
+				# if mimetype is not encodable, unset ENGZIP
+				[[ "$ENC_TYPES" == *${mimetype}* ]] || ENGZIP=""
+				send_header 200 ${mimetype} $(stat -c%s "${url}")
+				if [ $encgzip ]; then 
+					gzip -c "${url}"
 				else 
-					cat "${URL}"
+					cat "${url}"
 				fi
 			else send_response 404
 			fi
@@ -113,7 +138,7 @@ send_header(){
 	echo "Connection: close"
 	echo "Accept-Ranges: bytes"
 	echo "Content-Length: $3" 
-	[ $ENCGZIP ] && echo "Content-Encoding: gzip"
+	[ $encgzip ] && echo "Content-Encoding: gzip"
 	echo -en "\r\n"
 }
 
@@ -131,8 +156,8 @@ declare -a HTTP_RESPONSE=(
 # $1 path of directory
 send_directory_index(){
 
-	DIR=$1
-	RELDIR=$2
+	dir=$1
+	reldir=$2
 
 # HTML / CSS
 cat <<'EOF1'
@@ -160,34 +185,35 @@ cat <<'EOF1'
 
 EOF1
 
-	echo "<h2>Content of $RELDIR</h2>"	
+	echo "<h2>Content of $reldir</h2>"	
 	echo "<div class=\"list\">"
 	echo "<table summary=\"Directory Listing\" cellpadding=\"0\" cellspacing=\"0\">"
 	echo "<thead><tr><th class="n">Name</th><th class="m">Last Modified</th><th class="s">Size</th><th class="t">MIME-Type</th></tr></thead>"
 	echo "<tbody>"
-	SAVEIFS=$IFS
+	saveifs=$IFS
 	IFS=$(echo -en "\n\b")
 	#echo "<tr><td class=\"n\"><a href=\"..\">../</a></td><td class=\"m\">-</td><td class=\"s\">-</td><td class=\"t\">-</td></tr>"
+	# HTML for directory listing
 	for entry in $(ls -la $1); do
-		IFS=$SAVEIFS
+		IFS=$saveifs
 		entry=($entry)
 		file=$*
-		SIZE=`echo "${entry[4]}" | awk {'printf("%.2f kB", $1/1024)'}`
-		DATE="${entry[6]} ${entry[5]} ${entry[7]}"
+		size=`echo "${entry[4]}" | awk {'printf("%.2f kB", $1/1024)'}`
+		date="${entry[6]} ${entry[5]} ${entry[7]}"
 		file=""
 		for (( i=8; i<=${#entry[@]}; i++ )); do 
 			file="${file}${entry[i]} " 
 		done
 		file=$(echo "${file}" | sed 's/ *$//g') #remove tailing whitespace
-		if [ -d "${DIR}${file}" ] 
+		if [ -d "${dir}${file}" ] 
 		then
 			file="${file}/"
-			SIZE="-"
-			MIMETYPE="Directory"
+			size="-"
+			mimetype="Directory"
 		else 
-			MIMETYPE=$(file --mime-type "${URL}${file}" | sed 's#.*:\ ##')
+			mimetype=$(file --mime-type "${url}${file}" | sed 's#.*:\ ##')
 		fi
-		echo "<tr><td class=\"n\"><a href=\"${file}\">${file}</a></td><td class=\"m\">${DATE}</td><td class=\"s\">${SIZE}</td><td class=\"t\">${MIMETYPE}</td></tr>"
+		echo "<tr><td class=\"n\"><a href=\"${file}\">${file}</a></td><td class=\"m\">${date}</td><td class=\"s\">${size}</td><td class=\"t\">${mimetype}</td></tr>"
 	done
 
 	echo "</tbody></table></div><div class="foot">powered by <a href=\"https://github.com/araex/BASHare\">bashare</a></div></body></html>"
@@ -198,7 +224,7 @@ EOF1
 # $1 http response type
 # $2 [optional] mime-type
 send_response(){
-	ENCGZIP=""
+	encgzip=""
 	send_header $1 ${2-"text/html"}
 	echo "<html><head><title>$1 : ${HTTP_RESPONSE[$1]}</title></head>"
 	echo "<body><h1>$1: ${HTTP_RESPONSE[$1]}</h1>"
