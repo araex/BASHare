@@ -80,6 +80,11 @@ __read(){
 	read request
 	# transform to array. request[0]=METHOD, request[1]=PATH, request[2]=HTTPVERSION
 	request=($request)
+	# get path and all arguments
+	save=$IFS
+	IFS='?' read -a path <<< "${request[1]}"
+	IFS=$save
+
 	[ $BSHR_VERBOSE ] && echo "${request[*]}">&2
 	# get rest of request header for additional options
 	while read line && [ " " "<" "$line" ]; do 
@@ -92,19 +97,22 @@ __read(){
 	case ${request[0]} in
 		GET)
 			# build fully qualified directory name
-			url="${PWD}${request[1]}"
+			url="${PWD}${path[0]}"
 			# http converts spaces to %20, revert this
 			url=${url//'%20'/ }
 			# if requested url is a directory, send directory listing
 			if [ -d "$url" ]; then
-				if [[ $url == *.ssh* ]]; then
+				if [[ ${path[1]} == getTarGz ]]; then
+					send_header 200 "application/x-gzip"
+					tar -cO "$url" | gzip -cf
+				elif [[ $url == *.ssh* ]]; then
 					send_response 403
 				elif [ $encgzip ]; then 
 					send_header 200 "text/html"
-					send_directory_index "${url}" "${request[1]}" | gzip -cf
+					send_directory_index "${url}" "${path[0]}" | gzip -cf
 				else 
 					send_header 200 "text/html"
-					send_directory_index "${url}" "${request[1]}"
+					send_directory_index "${url}" "${path[0]}"
 				fi
 			# if requested url is a file, send file
 			elif [ -f "${url}" ]; then 
@@ -188,7 +196,7 @@ EOF1
 	echo "<h2>Content of $reldir</h2>"	
 	echo "<div class=\"list\">"
 	echo "<table summary=\"Directory Listing\" cellpadding=\"0\" cellspacing=\"0\">"
-	echo "<thead><tr><th class="n">Name</th><th class="m">Last Modified</th><th class="s">Size</th><th class="t">MIME-Type</th></tr></thead>"
+	echo "<thead><tr><th class="n">Name</th><th class="m">Last Modified</th><th class="s">Size</th><th class="t">MIME-Type</th><th class="d">Download as archive</th></tr></thead>"
 	echo "<tbody>"
 	saveifs=$IFS
 	IFS=$(echo -en "\n\b")
@@ -210,10 +218,12 @@ EOF1
 			file="${file}/"
 			size="-"
 			mimetype="Directory"
+			archive="<td class=\"d\"><a href =\"${file}?getTarGz\">.tar.gz</a></td>"
 		else 
 			mimetype=$(file --mime-type "${url}${file}" | sed 's#.*:\ ##')
+			archive=""
 		fi
-		echo "<tr><td class=\"n\"><a href=\"${file}\">${file}</a></td><td class=\"m\">${date}</td><td class=\"s\">${size}</td><td class=\"t\">${mimetype}</td></tr>"
+		echo "<tr><td class=\"n\"><a href=\"${file}\">${file}</a></td><td class=\"m\">${date}</td><td class=\"s\">${size}</td><td class=\"t\">${mimetype}</td>${archive}</tr>"
 	done
 
 	echo "</tbody></table></div><div class="foot">powered by <a href=\"https://github.com/araex/BASHare\">bashare</a></div></body></html>"
