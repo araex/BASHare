@@ -174,9 +174,9 @@ cat <<'EOF1'
   <head>
     <meta charset="utf-8"/>
     <style>
-    	@import url(http://fonts.googleapis.com/css?family=Raleway:200,400,600);
+	@import url(http://fonts.googleapis.com/css?family=Abel);
 	body, html { background: #222; margin: 0; }
-	html { font: 14px/1.4 Raleway, Helvetica, sans-serif; color: #ddd; font-weight: 400; }
+	html { font: 14px/1.4 'Abel', sans-serif; color: #ddd; font-weight: 300; }
 	h2 { font-weight: 200; font-size: 32px; margin: 20px 35px; }
 	div.list { background: #111; padding: 20px 35px; }
 	div.foot { color: #777; margin-top: 15px; padding: 20px 35px; }
