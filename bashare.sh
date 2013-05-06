@@ -16,18 +16,19 @@ __init(){
 		DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 		export BSHR_SOCAT_CALL="true"
 		socat TCP4-LISTEN:${BSHR_PORT},fork EXEC:"${DIR}/bashare.sh"
-
+		echo "Socat terminated. Goodbye."
 	elif [ $NETCAT ]
 	then
-		NCGNU=`nc --version | head -n 1 | grep GNU`; 
-		[ "$NCGNU" ] && echo "netcat-gnu is currently not supported. Please install either socat, openbsd-netcat or netcat-traditional. Terminating." && exit 1
+		#NCGNU=`nc --version | head -n 1 | grep GNU`; 
+		#[ "$NCGNU" ] && echo "netcat-gnu is currently not supported. Please install either socat, openbsd-netcat or netcat-traditional. Terminating." && exit 1
 		IOPIPE=/tmp/basharepipe
 		[ -p $IOPIPE ] || mkfifo $IOPIPE
 		echo "Using netcat. Directory '${PWD}' is now available on port ${BSHR_PORT}"
 		while true
 		do
-			nc -klp "${BSHR_PORT}" 0<$IOPIPE | (__read) 1>$IOPIPE
+			nc "-klp" "${BSHR_PORT}" 0<$IOPIPE | (__read) 1>$IOPIPE
 		done
+		echo "Netcat terminated. Goodbye."
 	else
 		echo "Couldn't locate netcat or socat, aborting."
 		exit 1
