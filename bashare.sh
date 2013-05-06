@@ -39,12 +39,13 @@ __init(){
 # parse command line arguments, export them for socat use
 __parse_Args(){
 	export BSHR_PORT=8000
-	while getopts "p:hrn" opt; do
+	while getopts "p:hrnv" opt; do
   		case $opt in
     			p)  BSHR_PORT=$OPTARG;;
 			h)  __showHelp $0;;
 			r)  echo "NOT IMPLEMENTED YET. Show only current directory, no subdirectories.";;
 			n)  SOCAT="";;
+			v)  export BSHR_VERBOSE="true";;
     			\?)  __showHelp $0;;
   		esac
 	done
@@ -55,6 +56,7 @@ __showHelp(){
 	echo "  -p: port to use"
 	echo "  -r: only serve current directory, no subdircetories"
 	echo "  -n: force use of netcat even if socat is installed"
+	echo "  -v: enable verbose mode"
 	echo "  -h: show this help"
 	exit 1
 }
@@ -62,17 +64,19 @@ __showHelp(){
 # HTTP request interpreter
 __read(){
 	REQ=""
+	read request
+	request=($request)
+	[ $BSHR_VERBOSE ] && echo "${request[*]}">&2
 	while read line && [ " " "<" "$line" ]; do 
 		REQ+="${line}" 
 	done
-	REQMETHOD=($(echo "$REQ" | grep "HTTP"))
 	[[ "$REQ" == *gzip* ]] && ENCGZIP="true"
 
-	case ${REQMETHOD[0]} in
+	case ${request[0]} in
 		GET)
-			URL=${PWD}${REQMETHOD[1]}
+			URL="${PWD}${request[1]}"
 			URL=${URL//'%20'/ }
-			if   [[ $URL == */ ]] #is dir 
+			if [ -d "$URL" ]
 			then
 				if [[ $URL == *.ssh* ]] 
 				then
@@ -80,10 +84,10 @@ __read(){
 				elif [ $ENCGZIP ]
 				then 
 					send_header 200 "text/html"
-					send_directory_index "${URL}" "${REQMETHOD[1]}" | gzip -cf
+					send_directory_index "${URL}" "${request[1]}" | gzip -cf
 				else 
 					send_header 200 "text/html"
-					send_directory_index "${URL}" "${REQMETHOD[1]}"
+					send_directory_index "${URL}" "${request[1]}"
 				fi
 			elif [ -f "${URL}" ]
 			then 
