@@ -6,20 +6,18 @@
 __init(){	
 	trap exit 1 2 3 6
 	[ $UID == 0 ] && echo "You shouldn\'t run this script with root privileges..."
-	command -v socat >/dev/null 2>&1 && SOCAT="true"
-	command -v netcat >/dev/null 2>&1 && NETCAT="true"
+	command -v socat >/dev/null 2>&1 && socat="true"
+	command -v netcat >/dev/null 2>&1 && netcat="true"
 
 	__parse_Args $@
 
-	if [ $SOCAT ]
-	then
+	if [ $socat ]; then
 		echo "Using socat. Directory '${PWD}' is now available on port ${BSHR_PORT}"
 		DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 		export BSHR_SOCAT_CALL="true"
 		socat TCP4-LISTEN:${BSHR_PORT},fork EXEC:"${DIR}/bashare.sh"
 		echo "Socat terminated. Goodbye."
-	elif [ $NETCAT ]
-	then
+	elif [ $netcat ]; then
 		#NCGNU=`nc --version | head -n 1 | grep GNU`; 
 		#[ "$NCGNU" ] && echo "netcat-gnu is currently not supported. Please install either socat, openbsd-netcat or netcat-traditional. Terminating." && exit 1
 		IOPIPE=/tmp/basharepipe
@@ -44,7 +42,7 @@ __parse_Args(){
     			p)  BSHR_PORT=$OPTARG;;
 			h)  __showHelp $0;;
 			r)  echo "NOT IMPLEMENTED YET. Show only current directory, no subdirectories.";;
-			n)  SOCAT="";;
+			n)  socat="";;
 			v)  export BSHR_VERBOSE="true";;
     			\?)  __showHelp $0;;
   		esac
@@ -68,36 +66,32 @@ __read(){
 	request=($request)
 	[ $BSHR_VERBOSE ] && echo "${request[*]}">&2
 	while read line && [ " " "<" "$line" ]; do 
-		REQ+="${line}" 
+		header+="${line}" 
 	done
-	[[ "$REQ" == *gzip* ]] && ENCGZIP="true"
-
+	[[ "$header" == *gzip* ]] && ENCGZIP="true"
 	case ${request[0]} in
 		GET)
 			URL="${PWD}${request[1]}"
 			URL=${URL//'%20'/ }
-			if [ -d "$URL" ]
-			then
-				if [[ $URL == *.ssh* ]] 
-				then
+			if [ -d "$URL" ]; then
+				if [[ $URL == *.ssh* ]]; then
 					send_response 403
-				elif [ $ENCGZIP ]
-				then 
+				elif [ $ENCGZIP ]; then 
 					send_header 200 "text/html"
 					send_directory_index "${URL}" "${request[1]}" | gzip -cf
 				else 
 					send_header 200 "text/html"
 					send_directory_index "${URL}" "${request[1]}"
 				fi
-			elif [ -f "${URL}" ]
-			then 
+			elif [ -f "${URL}" ]; then 
 				MIMETYPE=$(file --mime-type "${URL}" | sed 's#.*:\ ##')
 				VIABLETYPES="text/html text/css text/plain text/xml application/x-javascript application/x-httpd-phpi"
 				[[ "$VIABLETYPES" == *${MIMETYPE}* ]] || ENGZIP=""
 				send_header 200 ${MIMETYPE} $(stat -c%s "${URL}")
-				if [ $ENCGZIP ]
-				then gzip -c "${URL}"
-				else cat "${URL}"
+				if [ $ENCGZIP ]; then 
+					gzip -c "${URL}"
+				else 
+					cat "${URL}"
 				fi
 			else send_response 404
 			fi
@@ -174,8 +168,7 @@ EOF1
 	SAVEIFS=$IFS
 	IFS=$(echo -en "\n\b")
 	#echo "<tr><td class=\"n\"><a href=\"..\">../</a></td><td class=\"m\">-</td><td class=\"s\">-</td><td class=\"t\">-</td></tr>"
-	for entry in $(ls -la $1)
-	do
+	for entry in $(ls -la $1); do
 		IFS=$SAVEIFS
 		entry=($entry)
 		file=$*
