@@ -4,6 +4,7 @@
 # *netcat does not offer multiple simultanious connections
 
 __init(){	
+	trap exit 1 2 3 6
 	[ $UID == 0 ] && echo "You shouldn\'t run this script with root privileges..."
 	command -v socat >/dev/null 2>&1 && SOCAT="true"
 	command -v netcat >/dev/null 2>&1 && NETCAT="true"
@@ -62,7 +63,7 @@ __showHelp(){
 __read(){
 	REQ=""
 	while read line && [ " " "<" "$line" ]; do 
-		REQ=${REQ}${line} 
+		REQ+="${line}" 
 	done
 	REQMETHOD=($(echo "$REQ" | grep "HTTP"))
 	[[ "$REQ" == *gzip* ]] && ENCGZIP="true"
