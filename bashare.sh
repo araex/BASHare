@@ -104,7 +104,8 @@ __read(){
 			if [ -d "$url" ]; then
 				if [[ ${path[1]} == getTarGz ]]; then
 					send_header 200 "application/x-gzip"
-					tar -cO "$url" | gzip -cf
+					cd "$url"
+					tar -cO * | gzip -cf
 				elif [[ $url == *.ssh* ]]; then
 					send_response 403
 				elif [ $encgzip ]; then 
