@@ -74,6 +74,11 @@ __showHelp(){
 	exit 1
 }
 
+decode_url() {
+ 	printf -v decoded_url '%b' "${1//%/\\x}"
+	echo "$decoded_url"
+}
+
 # HTTP request interpreter
 __read(){
 	# get first line of http request: METHOD PATH HTTPVERSION
@@ -98,8 +103,8 @@ __read(){
 		GET)
 			# build fully qualified directory name
 			url="${PWD}${path[0]}"
-			# http converts spaces to %20, revert this
-			url=${url//'%20'/ }
+			# revert encoded url
+			url=`decode_url $url`
 			# if requested url is tarball of dir
 			if [[ ${path[1]} == getTarGz ]]; then
 				send_header 200 "application/x-gzip"
@@ -195,7 +200,7 @@ cat <<'EOF1'
 
 EOF1
 
-	echo "<h2>Content of $reldir</h2>"	
+	echo "<h2>Content of `decode_url $reldir`</h2>"	
 	echo "<div class=\"list\">"
 	echo "<table summary=\"Directory Listing\" cellpadding=\"0\" cellspacing=\"0\">"
 	echo "<thead><tr><th class="n">Name</th><th class="m">Last Modified</th><th class="s">Size</th><th class="t">MIME-Type</th><th class="d">Download as archive</th></tr></thead>"
