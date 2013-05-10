@@ -48,6 +48,13 @@ __init(){
 	fi	
 }	
 
+# get the mime type of file
+# $1 = full path to file
+get_mime_type(){
+	val=$(file --mime-type "$1" | sed 's#.*:\ ##')
+	echo "$val"
+}
+
 # called in SIGINT
 cleanup(){
 	echo
@@ -132,7 +139,7 @@ __read(){
 			# if requested url is a file, send file
 			elif [ -f "${url}" ]; then 
 				# get mimetype
-				mimetype=$(file --mime-type "${url}" | sed 's#.*:\ ##')
+				mimetype=`get_mime_type $url`
 				# if mimetype is not encodable, unset ENGZIP
 				[[ "$ENC_TYPES" == *${mimetype}* ]] || ENGZIP=""
 				send_header 200 ${mimetype} $(stat -c%s "${url}")
@@ -235,7 +242,7 @@ EOF1
 			mimetype="Directory"
 			archive="<td class=\"d\"><a href =\"${file}${file%?}.tgz?getTarGz\">.tar</a></td>"
 		else 
-			mimetype=$(file --mime-type "${url}${file}" | sed 's#.*:\ ##')
+			mimetype=`get_mime_type $file`
 			archive=""
 		fi
 		echo "<tr><td class=\"n\"><a href=\"${file}\">${file}</a></td><td class=\"m\">${date}</td><td class=\"s\">${size}</td><td class=\"t\">${mimetype}</td>${archive}</tr>"
