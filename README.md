@@ -10,6 +10,7 @@ Features:
 * share files on a small local webserver
 * supports HTTP compression (gzip)
 * compatible with socat and netcat
+* download folders as archive
 
 Install:
 --------
@@ -19,4 +20,4 @@ Install:
 
 Usage:
 ------
-1. run `bashare -p 8000`
+1. run `bashare`
