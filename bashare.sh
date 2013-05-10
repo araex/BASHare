@@ -100,13 +100,14 @@ __read(){
 			url="${PWD}${path[0]}"
 			# http converts spaces to %20, revert this
 			url=${url//'%20'/ }
+			# if requested url is tarball of dir
+			if [[ ${path[1]} == getTarGz ]]; then
+				send_header 200 "application/x-gzip"
+				cd "${url%/*}"
+				tar -cO | gzip -cf
 			# if requested url is a directory, send directory listing
-			if [ -d "$url" ]; then
-				if [[ ${path[1]} == getTarGz ]]; then
-					send_header 200 "application/x-gzip"
-					cd "$url"
-					tar -cO * | gzip -cf
-				elif [[ $url == *.ssh* ]]; then
+			elif [ -d "$url" ]; then
+				if [[ $url == *.ssh* ]]; then
 					send_response 403
 				elif [ $encgzip ]; then 
 					send_header 200 "text/html"
@@ -219,7 +220,7 @@ EOF1
 			file="${file}/"
 			size="-"
 			mimetype="Directory"
-			archive="<td class=\"d\"><a href =\"${file}?getTarGz\">.tar.gz</a></td>"
+			archive="<td class=\"d\"><a href =\"${file}${file%?}.tgz?getTarGz\">.tar</a></td>"
 		else 
 			mimetype=$(file --mime-type "${url}${file}" | sed 's#.*:\ ##')
 			archive=""
