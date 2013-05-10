@@ -5,7 +5,7 @@
 
 __init(){	
 	# exit on CTRL+C
-	trap exit 1 2 3 6
+	trap cleanup 1 2 3 6 15
 
 	# check if started with root privileges
 	[ $UID == 0 ] && echo "You shouldn\'t run this script with root privileges..."
@@ -27,7 +27,7 @@ __init(){
 		export BSHR_SOCAT_CALL="true"
 		# let socat execute the script
 		socat TCP4-LISTEN:${BSHR_PORT},fork EXEC:"${DIR}/bashare.sh"
-		echo "Socat terminated. Goodbye."
+		echo "Socat terminated."
 	elif [ $netcat ]; then
 		#TEMPORARILY REMOVED#NCGNU=`nc --version | head -n 1 | grep GNU`; 
 		#####################[ "$NCGNU" ] && echo "netcat-gnu is currently not supported. Please install either socat, openbsd-netcat or netcat-traditional. Terminating." && exit 1
@@ -41,12 +41,19 @@ __init(){
 		do
 			nc "-klp" "${BSHR_PORT}" 0<$IOPIPE | (__read) 1>$IOPIPE
 		done
-		echo "Netcat terminated. Goodbye."
+		echo "Netcat terminated."
 	else
 		echo "Couldn't locate netcat or socat, aborting."
 		exit 1
 	fi	
 }	
+
+# called in SIGINT
+cleanup(){
+	echo
+	echo "Goodbye."
+	exit 0
+}
 
 # parse command line arguments, export them for socat use
 __parse_Args(){
@@ -74,6 +81,7 @@ __showHelp(){
 	exit 1
 }
 
+# decode percentage encoded characters
 decode_url() {
  	printf -v decoded_url '%b' "${1//%/\\x}"
 	echo "$decoded_url"
