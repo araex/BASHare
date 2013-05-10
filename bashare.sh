@@ -3,6 +3,8 @@
 # dependencies: 'socat' or 'netcat'* 
 # *netcat does not offer multiple simultanious connections
 
+declare -A BSHR_MIMECACHE
+
 __init(){	
 	# exit on CTRL+C
 	trap cleanup 1 2 3 6 15
@@ -51,8 +53,11 @@ __init(){
 # get the mime type of file
 # $1 = full path to file
 get_mime_type(){
-	val=$(file --mime-type "$1" | sed 's#.*:\ ##')
-	echo "$val"
+	if [ ! ${BSHR_MIMECACHE["$1"]+1} ]; then
+		BSHR_MIMECACHE["$1"]=$(file --mime-type "$1" | sed 's#.*:\ ##')
+		#echo "set entry $1: ${BSHR_MIMECACHE["$1"]}">&2
+	fi
+	mimetype="${BSHR_MIMECACHE["$1"]}"
 }
 
 # called in SIGINT
