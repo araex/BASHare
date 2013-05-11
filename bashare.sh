@@ -59,12 +59,13 @@ cleanup(){
 # parse command line arguments, export them for socat use
 __parse_Args(){
 	export BSHR_PORT=8000
-	while getopts "p:hrnv" opt; do
+	while getopts "p:hrnva" opt; do
   		case $opt in
-    			p)  BSHR_PORT=$OPTARG;;
+			a)  export BSHR_ALL="true";;
 			h)  __showHelp $0;;
-			r)  echo "NOT IMPLEMENTED YET. Show only current directory, no subdirectories.";;
 			n)  socat="";;
+    			p)  BSHR_PORT=$OPTARG;;
+			r)  echo "NOT IMPLEMENTED YET. Show only current directory, no subdirectories.";;
 			v)  export BSHR_VERBOSE="true";;
     			\?)  __showHelp $0;;
   		esac
@@ -74,9 +75,10 @@ __parse_Args(){
 # called when -h is passed
 __showHelp(){
 	echo "Usage: `basename $1`: [-p port]"
+	echo "  -a: do not ignore files / folder starting with ."
+	echo "  -n: force use of netcat even if socat is installed"
 	echo "  -p: port to use"
 	echo "  -r: only serve current directory, no subdircetories"
-	echo "  -n: force use of netcat even if socat is installed"
 	echo "  -v: enable verbose mode"
 	echo "  -h: show this help"
 	exit 1
@@ -219,7 +221,10 @@ EOF1
 	IFS=$(echo -en "\n\b")
 	#echo "<tr><td class=\"n\"><a href=\"..\">../</a></td><td class=\"m\">-</td><td class=\"s\">-</td><td class=\"t\">-</td></tr>"
 	# HTML for directory listing
-	for entry in $(ls -la $1); do
+	if [ $BSHR_ALL ]; then list=`ls -la $1`
+	else list=`ls -l $1`
+	fi
+	for entry in $list; do
 		IFS=$saveifs
 		entry=($entry)
 		file=$*

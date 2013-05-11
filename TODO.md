@@ -13,3 +13,4 @@ ISSUES
 * Does not work with gnu-netcat. 
 * Check for gnu-netcat breaks openbsd-netcat.
 * Can't maintain multiple tcp connections when in netcat mode.
+* Even if hidden files are not listed, they can still be downloaded if entered manually in URL.
