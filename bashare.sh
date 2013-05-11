@@ -3,7 +3,6 @@
 # dependencies: 'socat' or 'netcat'* 
 # *netcat does not offer multiple simultanious connections
 
-declare -A BSHR_MIMECACHE
 
 __init(){	
 	# exit on CTRL+C
@@ -49,16 +48,6 @@ __init(){
 		exit 1
 	fi	
 }	
-
-# get the mime type of file
-# $1 = full path to file
-get_mime_type(){
-	if [ ! ${BSHR_MIMECACHE["$1"]+1} ]; then
-		BSHR_MIMECACHE["$1"]=$(file --mime-type "$1" | sed 's#.*:\ ##')
-		#echo "set entry $1: ${BSHR_MIMECACHE["$1"]}">&2
-	fi
-	mimetype="${BSHR_MIMECACHE["$1"]}"
-}
 
 # called in SIGINT
 cleanup(){
@@ -129,7 +118,8 @@ __read(){
 			if [[ ${path[1]} == getTarGz ]]; then
 				send_header 200 "application/x-gzip"
 				cd "${url%/*}"
-				tar -cO | gzip -cf
+				echo "zip: $PWD">&2
+				tar -cO * | gzip -cf
 			# if requested url is a directory, send directory listing
 			elif [ -d "$url" ]; then
 				if [[ $url == *.ssh* ]]; then
@@ -144,7 +134,7 @@ __read(){
 			# if requested url is a file, send file
 			elif [ -f "${url}" ]; then 
 				# get mimetype
-				mimetype=`get_mime_type $url`
+				mimetype==$(file --mime-type "$url" | sed 's#.*:\ ##')
 				# if mimetype is not encodable, unset ENGZIP
 				[[ "$ENC_TYPES" == *${mimetype}* ]] || ENGZIP=""
 				send_header 200 ${mimetype} $(stat -c%s "${url}")
@@ -247,7 +237,7 @@ EOF1
 			mimetype="Directory"
 			archive="<td class=\"d\"><a href =\"${file}${file%?}.tgz?getTarGz\">.tar</a></td>"
 		else 
-			mimetype=`get_mime_type $file`
+			mimetype=$(file --mime-type "${url}${file}" | sed 's#.*:\ ##')
 			archive=""
 		fi
 		echo "<tr><td class=\"n\"><a href=\"${file}\">${file}</a></td><td class=\"m\">${date}</td><td class=\"s\">${size}</td><td class=\"t\">${mimetype}</td>${archive}</tr>"
