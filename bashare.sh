@@ -65,7 +65,7 @@ __parse_Args(){
 			h)  __showHelp $0;;
 			n)  socat="";;
     			p)  BSHR_PORT=$OPTARG;;
-			r)  echo "NOT IMPLEMENTED YET. Show only current directory, no subdirectories.";;
+			r)  export BSHR_NOSUB="true";;
 			v)  export BSHR_VERBOSE="true";;
     			\?)  __showHelp $0;;
   		esac
@@ -244,11 +244,14 @@ EOF1
 	echo "<tbody>"
 	saveifs=$IFS
 	IFS=$(echo -en "\n\b")
-	#echo "<tr><td class=\"n\"><a href=\"..\">../</a></td><td class=\"m\">-</td><td class=\"s\">-</td><td class=\"t\">-</td></tr>"
-	# HTML for directory listing
-	if [ $BSHR_ALL ]; then list=`ls -la $1`
-	else list=`ls -l $1`
+	# create file tree according to arguments
+	if [ $BSHR_ALL ] && [ $BSHR_NOSUB ]; then list=`ls -la $1 | grep ^-` # bashare -ar
+	elif [ $BSHR_ALL ]; then list=`ls -la $1` # bashare -a
+	elif [ $BSHR_NOSUB ]; then list=`ls -l $1 | grep ^-` # bashare -r
+	else list=`ls -l $1` # bashare
 	fi
+
+	# HTML for directory listing
 	for entry in $list; do
 		IFS=$saveifs
 		entry=($entry)
