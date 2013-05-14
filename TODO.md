@@ -4,7 +4,6 @@ TODO
 * Cache MIME-type information for files due to bad performance of `file --mime-type`.
 * Add call parameters to:
     * disable MIME-type detection for improved performance.
-    * share current folder only (no subdirs).
     * customize download archive option.
 
 ISSUES
