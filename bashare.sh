@@ -84,6 +84,27 @@ __showHelp(){
 	exit 1
 }
 
+# function to manage output
+# $1 DEBUG|VERBOSE
+# $2 message
+writeToStdOut(){
+	case $1 in
+		DEBUG)
+			if [ $BSHR_DEBUG ]; then
+				shift 1
+				echo "$@">&2
+			fi
+			;;
+		VERBOSE)
+			if [ $BSHR_VERBOSE ]; then
+				shift 1
+				echo "$@">&2
+			fi
+			;;
+		*)	;;
+	esac
+}
+
 # decode percentage encoded characters
 decode_url() {
  	printf -v decoded_url '%b' "${1//%/\\x}"
@@ -101,7 +122,7 @@ __read(){
 	IFS='?' read -a path <<< "${request[1]}"
 	IFS=$save
 
-	[ $BSHR_VERBOSE ] && echo "${request[*]}">&2
+	writeToStdOut "VERBOSE" "${request[*]}"
 	# get rest of request header for additional options
 	while read line && [ " " "<" "$line" ]; do 
 		header+="${line}" 
