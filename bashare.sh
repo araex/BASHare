@@ -85,7 +85,7 @@ __showHelp(){
 }
 
 # function to manage output
-# $1 DEBUG|VERBOSE
+# $1 DEBUG|VERBOSE|ANY
 # $2 message
 writeToStdOut(){
 	case $1 in
@@ -100,6 +100,10 @@ writeToStdOut(){
 				shift 1
 				echo "$@">&2
 			fi
+			;;
+		ANY)
+			shift 1
+			echo "$@">&2
 			;;
 		*)	;;
 	esac
@@ -141,7 +145,7 @@ __read(){
 			if [[ ${path[1]} == getTarGz ]]; then
 				send_header 200 "application/x-gzip"
 				cd "${url%/*}"
-				echo "zip: $PWD">&2
+				writeToStdOut "VERBOSE" "creating tarball: $url"
 				tar -cO * | gzip -cf
 			# if requested url is a directory, send directory listing
 			elif [ -d "$url" ]; then
@@ -277,6 +281,7 @@ EOF1
 # $1 http response type
 # $2 [optional] mime-type
 send_response(){
+	writeToStdOut "VERBOSE" "Error: $1 - ${HTTP_RESPONSE[$1]}"
 	encgzip=""
 	send_header $1 ${2-"text/html"}
 	echo "<html><head><title>$1 : ${HTTP_RESPONSE[$1]}</title></head>"
