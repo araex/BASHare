@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/bin/bash
 # BASHare is a utility that shares the currently open directory on a built in webserver
 # dependencies: 'socat' or 'netcat'* 
 # *netcat does not offer multiple simultanious connections
