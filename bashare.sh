@@ -49,7 +49,7 @@ __init(){
 	fi	
 }	
 
-# called in SIGINT
+# called on SIGINT
 cleanup(){
 	echo
 	echo "Goodbye."
@@ -64,10 +64,10 @@ __parse_Args(){
 			a)  export BSHR_ALL="true";;
 			h)  __showHelp $0;;
 			n)  socat="";;
-    			p)  BSHR_PORT=$OPTARG;;
+    		p)  BSHR_PORT=$OPTARG;;
 			r)  export BSHR_NOSUB="true";;
 			v)  export BSHR_VERBOSE="true";;
-    			\?)  __showHelp $0;;
+    		\?)  __showHelp $0;;
   		esac
 	done
 }
@@ -145,8 +145,9 @@ __read(){
 			if [[ ${path[1]} == getTarGz ]]; then
 				send_header 200 "application/x-gzip"
 				cd "${url%/*}"
-				writeToStdOut "VERBOSE" "creating tarball: $url"
-				tar -cO * | gzip -cf
+				writeToStdOut "ANY" "creating tarball..."
+				tar cvf - * | gzip -cf
+				writeToStdOut "ANY" "done"
 			# if requested url is a directory, send directory listing
 			elif [ -d "$url" ]; then
 				if [[ $url == *.ssh* ]]; then
