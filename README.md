@@ -3,7 +3,7 @@ BASHare
 
 Utility that conveniently serves the current directory + all subdirectory from a webserver.
 
-Requires the utility `socat` or `netcat`. netcat does not allow for multiple simultaneous TCP connections, install socat for multi user support. If both are installed, bashare will use socat by default to utilize all features.
+Requires the utility `socat` or `netcat`. netcat does not allow for multiple simultaneous TCP connections, install socat for multi user support. If both are installed, bashare will use socat by default to utilize all features. `file` is needed to detect the correct MIME types.
 
 Features:
 ---------
